@@ -6,15 +6,16 @@ public class Main extends PApplet {
 
     int currCell = randCell();
 
-    int chessH = 400;
+    int chessSize = 800;
 
     List<Map.Entry<Integer, Boolean>> history = new ArrayList<>();
     private int yellowHighlightedCell = -1;
     private int redHighlightedCell = -1;
     int highlightTime = -1;
 
+    final long startTime = System.currentTimeMillis();
     public void settings() {
-        size(400, 440);
+        size(chessSize, chessSize + 40);
     }
 
     public void setup() {
@@ -22,27 +23,51 @@ public class Main extends PApplet {
     }
 
     public void draw() {
-        translate(0, 20);
+        translate(0, 40);
         background(28);
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
                 fillHex(getCellColor(i, j));
-                rect(i * width / 8f, j * chessH / 8f, width / 8f, chessH / 8f);
+                rect(i * width / 8f, j * chessSize / 8f, width / 8f, chessSize / 8f);
             }
         }
+        textSize(20);
         for (int i = 0; i < 8; i++) {
-            fillHex(i % 2 != 0 ? 0xb58963 : 0xefd9b5);
-            text(8 - i, 1, i * chessH / 8f + 11);
             fillHex(i % 2 == 0 ? 0xb58963 : 0xefd9b5);
-            text("abcdefgh".charAt(i), (i + 1) * width / 8f - 9, chessH - 3);
+            text(8 - i, 1, i * chessSize / 8f + 17);
+            fillHex(i % 2 == 0 ? 0xefd9b5 : 0xb58963);
+            text("abcdefgh".charAt(i), (i + 1) * width / 8f - 14, chessSize - 5);
         }
+
         fill(193);
-        for (int i = 0; i < history.size(); i++) {
+        textSize(15);
+        translate(0, -40);
+        int totalDisplacement = 0;
+        for (int i = 0; i < Math.min(history.size(), 15); i++) {
             Map.Entry<Integer, Boolean> cell = history.get(history.size() - i - 1);
-            text("abcdefgh".charAt(cell.getKey() % 8) + String.valueOf(8-(cell.getKey()) / 8), width - 16 - i * 16, chessH + 10);
+            String text = "abcdefgh".charAt(cell.getKey() % 8) + String.valueOf(8 - (cell.getKey()) / 8);
+            totalDisplacement += getGraphics().textWidth(text);
+            if (cell.getValue()) fillHex(0x244a00);
+            else fillHex(0x5e0600);
+            text(text, width / 2f - 16 - i * 4 - totalDisplacement, 36);
         }
-        translate(0, -20);
-        text("abcdefgh".charAt(currCell % 8) + String.valueOf(8- currCell / 8), width/2f-5, 15);
+        textSize(36);
+        fill(193);
+        text("abcdefgh".charAt(currCell % 8) + String.valueOf(8 - currCell / 8), width / 2f - 5, 34);
+
+        textSize(15);
+        int numOfRights = (int) history.stream().filter(Map.Entry::getValue).count();
+        text(String.format("%s/%s", numOfRights, history.size()), width-60, 16);
+
+        int timeDiff = (int) (System.currentTimeMillis() - startTime);
+        String timeText = String.format("%s:%s", addZeroIfNeeded(String.valueOf(timeDiff/60000)), addZeroIfNeeded(String.valueOf(timeDiff/1000%60)));
+        text(timeText, 2, 16);
+
+        if (history.size() > 0) {
+            int avgTime = timeDiff / history.size();
+            String avgTimeText = String.format("%s:%s", addZeroIfNeeded(String.valueOf(avgTime/1000)), addZeroIfNeeded(String.valueOf(avgTime%1000/10)));
+            text(avgTimeText, 24, 35);
+        }
 
         if (highlightTime == 0) redHighlightedCell = yellowHighlightedCell = -1;
         else if (highlightTime > 0) highlightTime--;
@@ -50,16 +75,13 @@ public class Main extends PApplet {
 
     public void mousePressed() {
         int col = (mouseX) * 8 / width;
-        int row = (mouseY-20) * 8 / chessH;
+        int row = (mouseY - 40) * 8 / chessSize;
         int clickedCell = col + row * 8;
         yellowHighlightedCell = clickedCell;
         redHighlightedCell = currCell;
         highlightTime = 90;
-        history.add(new AbstractMap.SimpleEntry<>(currCell, false));
+        history.add(new AbstractMap.SimpleEntry<>(currCell, clickedCell == currCell));
         currCell = randCell();
-        if (history.size() > 15) {
-            history.remove(0);
-        }
     }
 
     void fillHex(int hex) {
@@ -74,10 +96,15 @@ public class Main extends PApplet {
     }
 
     int getCellColor(int col, int row) {
-        int color = (col % 2 == (row % 2 == 0 ? 0 : 1) ? 0xb58963 : 0xefd9b5);
-        if (redHighlightedCell == col + row * 8) color = col % 2 == (row % 2 == 0 ? 0 : 1) ? 0x8d4945 : 0x914e4a;
-        if (yellowHighlightedCell == col + row * 8) color = col % 2 == (row % 2 == 0 ? 0 : 1) ? 0xd9c44c : 0xf7ec73;
+        int color = (col % 2 == (row % 2 == 0 ? 1 : 0) ? 0xb58963 : 0xefd9b5);
+        if (redHighlightedCell == col + row * 8) color = col % 2 == (row % 2 == 0 ? 1 : 0) ? 0x8d4945 : 0x914e4a;
+        if (yellowHighlightedCell == col + row * 8) color = col % 2 == (row % 2 == 0 ? 1 : 0) ? 0xd9c44c : 0xf7ec73;
         return color;
+    }
+
+    String addZeroIfNeeded(String input) {
+        if (input.length() < 2) input = "0" + input;
+        return input;
     }
 
     public static void main(String[] args) {
